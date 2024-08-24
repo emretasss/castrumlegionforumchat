@@ -1,41 +1,73 @@
-import express from 'express';
-import { Server } from 'socket.io';
 import http from 'http';
-import mongoose from 'mongoose';
-import Forum from '../models/Forum'; // Doğru içe aktarma yolu
+import { Server as SocketIOServer } from 'socket.io';
+import cors from 'cors';
+import { connectDB } from '../lib/mongodb'; // MongoDB bağlantı fonksiyonunu içe aktar
+import Message from '../models/Message'; // Mesaj modelini içe aktar
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+// HTTP sunucusu oluştur
+const httpServer = http.createServer();
 
-io.on('connection', (socket) => {
-  console.log('A user connected');
-
-  socket.on('joinRoom', (room) => {
-    socket.join(room);
-  });
-
-  socket.on('chatMessage', async (msg) => {
-    const forumMessage = new Forum(msg);
-    await forumMessage.save();
-    io.to(msg.room).emit('message', msg);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('User disconnected');
-  });
+// Socket.io sunucusu oluştur ve HTTP sunucusuna bağla
+const io = new SocketIOServer(httpServer, {
+  cors: {
+    origin: 'http://localhost:3000', // React uygulamanızın çalıştığı URL
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['my-custom-header'],
+    credentials: true,
+  },
 });
 
-const startServer = async () => {
+// MongoDB bağlantısı kur
+const initializeDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || '');
-    console.log('MongoDB connected');
-    server.listen(5000, () => {
-      console.log('Server is running on port 5000');
-    });
-  } catch (error) {
-    console.error(error);
+    await connectDB();
+    console.log('Connected to MongoDB');
+  } catch (err) {
+    console.error('MongoDB connection error:', err);
   }
 };
 
-startServer();
+// Socket.io olaylarını yönet
+io.on('connection', (socket) => {
+  console.log('A user connected:', socket.id);
+
+  // Odaya katılma
+  socket.on('join_room', (roomId) => {
+    socket.join(roomId);
+    console.log(`User with id-${socket.id} joined room - ${roomId}`);
+  });
+
+  // Mesaj gönderme
+  socket.on('send_msg', async (data) => {
+    console.log('Received message data:', data);
+    
+    try {
+      // Veritabanına mesaj kaydet
+      const newMessage = new Message({
+        roomId: data.roomId,
+        userName: data.userName,
+        text: data.text,
+      });
+      await newMessage.save();
+  
+      // Mesajı belirli bir odaya gönder
+      io.to(data.roomId).emit('receive_msg', data);
+    } catch (error) {
+      console.error('Error saving message:', error);
+    }
+  });
+
+  // Bağlantı kesildiğinde
+  socket.on('disconnect', () => {
+    console.log('A user disconnected:', socket.id);
+  });
+});
+
+// Sunucuyu başlat
+const PORT = process.env.PORT || 3001;
+httpServer.listen(PORT, () => {
+  console.log(`Socket.io server is running on port ${PORT}`);
+});
+
+// Veritabanı bağlantısını başlat
+initializeDB();

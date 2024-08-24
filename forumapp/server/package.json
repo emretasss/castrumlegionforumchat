@@ -1,0 +1,22 @@
+{
+    "name": "node-express-app",
+    "version": "1.0.0",
+    "description": "A simple app for messaging and streaming",
+    "main": "server.js",
+    "type": "module", 
+    "scripts": {
+        "start": "nodemon server.js"
+    },
+    "dependencies": {
+        "bcryptjs": "^2.4.3",
+        "cookie-parser": "^1.4.6",
+        "dotenv": "^16.4.5",
+        "express": "^4.19.2",
+        "jsonwebtoken": "^9.0.2",
+        "mongoose": "^8.3.2",
+        "socket.io": "^4.7.5"
+    },
+    "devDependencies": {
+        "nodemon": "^3.1.0"
+    }
+}

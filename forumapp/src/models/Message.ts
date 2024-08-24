@@ -1,11 +1,17 @@
-import mongoose from 'mongoose';
+import mongoose, { Document, Schema } from 'mongoose';
 
-const messageSchema = new mongoose.Schema({
-  room: { type: String, required: true },
+interface IMessage extends Document {
+  roomId: string;
+  userName: string;
+  text: string;
+}
+
+const messageSchema: Schema = new Schema({
+  roomId: { type: String, required: true },
+  userName: { type: String, required: true },
   text: { type: String, required: true },
-  user: { type: String, required: true },
-  createdAt: { type: Date, default: Date.now },
-});
+}, { timestamps: true });
 
-const Message = mongoose.model('Message', messageSchema);
-export default Message; // Export default olarak düzenleyin
+const Message = mongoose.model<IMessage>('Message', messageSchema);
+
+export default Message;
